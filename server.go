@@ -31,19 +31,32 @@ type loginErrors struct {
 	whatHappened string
 }
 
-func (l *clientLogin) register() {
-
+func (l *loginErrors) Error() string {
+	return l.whatHappened
 }
 
 func grantAccess(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "chat.html")
 }
 
-func (l *loginErrors) Error() string {
-	return l.whatHappened
+func (l *clientLogin) getCredentials(w http.ResponseWriter, r *http.Request) error {
+	err := r.ParseForm()
+
+	if err != nil {
+		return &loginErrors{"Could not parse request form."}
+	} else {
+
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+
+		l.username = username
+		l.password = password
+	}
+
+	return nil
 }
 
-func (l *clientLogin) lookupUser(w http.ResponseWriter) error {
+func (l *clientLogin) lookupUser(onPage string) error {
 	var userAndPassFields []string
 
 	databaseHandler, _ := os.Open("users.txt")
@@ -67,20 +80,41 @@ func (l *clientLogin) lookupUser(w http.ResponseWriter) error {
 		}
 
 		//find username and validate password
-		for _, v := range userAndPassFields {
-			for i, j := range v {
-				if j == ':' {
-					username := v[0:i]
-					fmt.Println(username)
+		//if on login page
+		if onPage == "login.html" {
+			for _, v := range userAndPassFields {
+				for i, j := range v {
+					if j == ':' {
+						username := v[0:i]
+						fmt.Println(username)
 
-					if l.username == username {
-						password := v[i:]
+						if l.username == username {
+							password := v[i+1:]
+							fmt.Println(password)
 
-						if l.password == password {
-							return nil
-						} else {
+							if l.password == password {
+								return nil
+							} else {
+								return &loginErrors{
+									whatHappened: "Incorrect password.",
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if onPage == "register.html" {
+			for _, v := range userAndPassFields {
+				for i, j := range v {
+					if j == ':' {
+						username := v[0:i]
+						fmt.Println(username)
+
+						if l.username == username {
 							return &loginErrors{
-								whatHappened: "Incorrect password.",
+								whatHappened: "Username taken.",
 							}
 						}
 					}
@@ -96,44 +130,42 @@ func (l *clientLogin) lookupUser(w http.ResponseWriter) error {
 
 }
 
+func login(w http.ResponseWriter, r *http.Request) {
+	pageToOpen := r.URL.Path[1:]
+
+	switch r.Method {
+	case "GET":
+		if string(pageToOpen) == "login.html" {
+			http.ServeFile(w, r, string(pageToOpen))
+		}
+
+	case "POST":
+		submittedLogin := &clientLogin{}
+		err := submittedLogin.getCredentials(w, r)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = submittedLogin.lookupUser(string(pageToOpen))
+
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			grantAccess(w, r)
+		}
+
+	}
+}
+
+func register(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func main() {
 
-	loadLogin := func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "GET":
-			fileToOpen := r.URL.Path[1:]
-
-			if string(fileToOpen) == "login.html" {
-				http.ServeFile(w, r, string(fileToOpen))
-			}
-
-		case "POST":
-			err := r.ParseForm()
-
-			if err != nil {
-				log.Fatal(err)
-			} else {
-				submittedLogin := &clientLogin{}
-
-				username := r.FormValue("username")
-				password := r.FormValue("password")
-
-				submittedLogin.username = username
-				submittedLogin.password = password
-
-				err := submittedLogin.lookupUser(w)
-
-				if err != nil {
-					log.Fatal(err)
-				} else {
-					grantAccess(w, r)
-				}
-
-			}
-		}
-	}
-
-	http.HandleFunc("/login.html", loadLogin)
+	http.HandleFunc("/login.html", login)
+	http.HandleFunc("/register.html", register)
 
 	http.ListenAndServe(":8080", nil)
 }
