@@ -120,6 +120,8 @@ func (l *clientLogin) lookupUser(onPage string) error {
 					}
 				}
 			}
+
+			return nil
 		}
 
 	}
@@ -159,6 +161,35 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
+	//This is a bit of obscure code, the error here is from the
+	//lookupUser function, which if you look at there's
+	//functionality to see what page the user is on.
+	//
+	//Since the code from the registration page executes,
+	//either an error explaining that the username is taken
+	//is returned or nothing at all
+
+	onPage := r.URL.Path[1:]
+
+	if r.Method == "GET" {
+		http.ServeFile(w, r, "register.html")
+	}
+	if r.Method == "POST" {
+		submittedRegistration := &clientLogin{}
+		parseError := submittedRegistration.getCredentials(w, r)
+
+		if parseError != nil {
+			log.Fatal(parseError)
+		}
+
+		userExists := submittedRegistration.lookupUser(onPage)
+
+		if userExists != nil {
+			log.Fatal(userExists)
+		} else {
+			fmt.Println("It works.")
+		}
+	}
 
 }
 
