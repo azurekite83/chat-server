@@ -65,6 +65,14 @@ func (l *clientLogin) lookupUser(onPage string) error {
 	if err != nil {
 		log.Fatal(err)
 	} else {
+		closeErr, syncErr := databaseHandler.Close(), databaseHandler.Sync()
+
+		if closeErr != nil {
+			log.Fatal(closeErr)
+		} else if syncErr != nil {
+			log.Fatal(syncErr)
+		}
+
 		var singleField []string
 		//put usernames and passwords in a format thats easier to
 		//work with
@@ -86,11 +94,9 @@ func (l *clientLogin) lookupUser(onPage string) error {
 				for i, j := range v {
 					if j == ':' {
 						username := v[0:i]
-						fmt.Println(username)
 
 						if l.username == username {
 							password := v[i+1:]
-							fmt.Println(password)
 
 							if l.password == password {
 								return nil
@@ -110,7 +116,6 @@ func (l *clientLogin) lookupUser(onPage string) error {
 				for i, j := range v {
 					if j == ':' {
 						username := v[0:i]
-						fmt.Println(username)
 
 						if l.username == username {
 							return &loginErrors{
@@ -142,7 +147,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "POST":
-		submittedLogin := &clientLogin{}
+		submittedLogin := new(clientLogin)
 		err := submittedLogin.getCredentials(w, r)
 
 		if err != nil {
@@ -160,6 +165,25 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (l *clientLogin) writeToDatabase() error {
+	databaseHandle, fileError := os.OpenFile("users.txt", os.O_APPEND, 0600)
+
+	if fileError != nil {
+		log.Fatal(fileError)
+	} else {
+		usernameAndPass := l.username + ":" + l.password + "\n"
+		fmt.Println(usernameAndPass)
+
+		_, writeError := databaseHandle.WriteString(usernameAndPass)
+
+		if writeError != nil {
+			return writeError
+		}
+	}
+
+	return nil
+}
+
 func register(w http.ResponseWriter, r *http.Request) {
 	//This is a bit of obscure code, the error here is from the
 	//lookupUser function, which if you look at there's
@@ -175,7 +199,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "register.html")
 	}
 	if r.Method == "POST" {
-		submittedRegistration := &clientLogin{}
+		submittedRegistration := new(clientLogin)
 		parseError := submittedRegistration.getCredentials(w, r)
 
 		if parseError != nil {
@@ -187,7 +211,11 @@ func register(w http.ResponseWriter, r *http.Request) {
 		if userExists != nil {
 			log.Fatal(userExists)
 		} else {
-			fmt.Println("It works.")
+			writeError := submittedRegistration.writeToDatabase()
+
+			if writeError != nil {
+				log.Fatal(writeError)
+			}
 		}
 	}
 
