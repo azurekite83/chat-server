@@ -7,10 +7,6 @@ import (
 type ClientInfo struct {
 	clientIP net.IP
 	userID   string
-}
-
-type ClientLogin struct {
-	username string
 	password string
 }
 

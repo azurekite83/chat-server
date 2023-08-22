@@ -19,7 +19,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "POST":
-		submittedLogin := new(ClientLogin)
+		submittedLogin := new(ClientInfo)
 		err := submittedLogin.GetCredentials(w, r)
 
 		if err != nil {
@@ -52,7 +52,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "register.html")
 	}
 	if r.Method == "POST" {
-		submittedRegistration := new(ClientLogin)
+		submittedRegistration := new(ClientInfo)
 		parseError := submittedRegistration.GetCredentials(w, r)
 
 		if parseError != nil {
