@@ -6,7 +6,7 @@ import (
 )
 
 func grantAccess(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "chat.html")
+	http.ServeFile(w, r, "web-pages/chat.html")
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
@@ -14,7 +14,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		if string(pageToOpen) == "login.html" {
+		if string(pageToOpen) == "web-pages/login.html" {
 			http.ServeFile(w, r, string(pageToOpen))
 		}
 
@@ -49,7 +49,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	onPage := r.URL.Path[1:]
 
 	if r.Method == "GET" {
-		http.ServeFile(w, r, "register.html")
+		http.ServeFile(w, r, "web-pages/register.html")
 	}
 	if r.Method == "POST" {
 		submittedRegistration := new(ClientInfo)
@@ -72,4 +72,8 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+}
+
+func RootHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "web-pages/index.html")
 }

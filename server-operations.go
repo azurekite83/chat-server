@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -121,4 +123,22 @@ func (l *ClientInfo) GetCredentials(w http.ResponseWriter, r *http.Request) erro
 	}
 
 	return nil
+}
+
+func ConnStateHandler(conn net.Conn, event http.ConnState) {
+	connIP := conn.RemoteAddr().String()
+
+	if event == http.StateActive {
+		client := &ClientInfo{}
+		client.connStatus = &conn
+		client.IPAddr = connIP
+
+		ClientPool[connIP] = *client
+
+		fmt.Println(ClientPool)
+
+	} else if event == http.StateHijacked || event == http.StateClosed {
+		delete(ClientPool, connIP)
+		fmt.Println(ClientPool)
+	}
 }
